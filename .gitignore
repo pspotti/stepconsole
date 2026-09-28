@@ -1,0 +1,14 @@
+# Segreti locali, mai su git
+config/sam.local.php
+
+# Stato/log a runtime, cambia in continuazione, non è codice
+data/schedule.json
+data/scheduler.log
+wallconfig/schedule.json
+
+# Python
+wallconfig/__pycache__/
+*.pyc
+
+# Editor swap files
+*.swp

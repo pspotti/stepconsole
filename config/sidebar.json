@@ -1,0 +1,47 @@
+{
+  "_comment": "Voci di menu statiche della sidebar, condivise da includes/sidebar.php (console PHP) e wallconfig/app.py+templates/index.html (Flask): un solo file da modificare per aggiungere/togliere/rinominare una voce, invece di tenere sincronizzate a mano due sidebar scritte in due linguaggi diversi. Esclusa la sezione 'Percorso mostra' (lista dinamica da config/stations.php, resta duplicata a mano come già commentato in includes/layout_top.php e wallconfig/templates/index.html). 'href' è relativo alla console PHP; il sentinel '__WALLCONFIG__' indica la voce che punta al servizio WallConfig stesso (risolta a wallconfig_base_url() lato PHP, a '/' con classe 'active' lato Flask, che è quel servizio). 'removable' segna una sezione rimovibile in blocco (vedi test_giornalisti.php).",
+  "sections": [
+    {
+      "title": "Dashboard",
+      "items": [
+        { "key": "", "href": "index.php", "label": "Panoramica" }
+      ]
+    },
+    {
+      "title": "Emergenza / recovery",
+      "items": [
+        { "key": "recovery", "href": "recovery.php", "label": "Sblocco generico" }
+      ]
+    },
+    {
+      "title": "Dispositivi",
+      "items": [
+        { "key": "brightsign", "href": "brightsign.php", "label": "Gestione BrightSign" },
+        { "key": "tesmart_test", "href": "tesmart_test.php", "label": "Scenari Schermo Windoor" },
+        { "key": "wallconfig", "href": "__WALLCONFIG__", "label": "Scenari Schermi STEP" }
+      ]
+    },
+    {
+      "title": "Gestione audio",
+      "items": [
+        { "key": "audio_master", "href": "audio_master.php", "label": "Scenari Audio" },
+        { "key": "audio_yamaha", "href": "audio.php", "label": "Gestione Audio Yamaha" },
+        { "key": "audio_jobs", "href": "audio_jobs.php", "label": "Gestione Audio Jobs" },
+        { "key": "audio_sam", "href": "audio_sam.php", "label": "Gestione Audio SAM" }
+      ]
+    },
+    {
+      "title": "Schedulazioni",
+      "items": [
+        { "key": "scheduler", "href": "scheduler.php", "label": "Schedulazioni" }
+      ]
+    },
+    {
+      "title": "Test giornalisti",
+      "removable": true,
+      "items": [
+        { "key": "test_giornalisti", "href": "test_giornalisti.php", "label": "Redis publish step04in" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scenari Schermi STEP · STEP Console</title>
+<!-- Stesso foglio di stile della console STEPconsolle (PHP): non è una
+     copia, è il file vero, caricato cross-origin dalla stessa macchina
+     (WallConfig sulla :8000, la console su Apache). Così l'aspetto resta
+     coerente anche se la palette/i componenti del sito cambiano in futuro,
+     senza dover tenere sincronizzato un secondo CSS qui. -->
+<link rel="stylesheet" href="{{ step_base_url }}/assets/css/style.css">
+<style>
+  /* Le sole due regole che non esistono già in style.css: le azioni
+     (Sospendi/Riattiva, Elimina) di ogni riga dello scheduler sono due
+     <form> distinti (qui non c'è un layer JS/AJAX come in scheduler.js
+     della console PHP), quindi vanno affiancati e i loro bottoni non
+     devono ereditare il margine verticale che .btn ha di default. */
+  .job-row-actions form { display: inline; margin-left: 6px; }
+  .job-row-actions button { margin: 0; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Le voci statiche di questa sidebar (Dashboard, Emergenza, Dispositivi,
+       Gestione audio, Schedulazioni, Test giornalisti) vengono da
+       config/sidebar.json, condiviso con includes/layout_top.php (la
+       console PHP): un solo file da modificare per aggiungere/togliere/
+       rinominare una voce, non serve più tenere sincronizzate a mano due
+       sidebar scritte in due linguaggi diversi (vedi app.py,
+       load_sidebar_sections). La sezione "Percorso mostra" resta invece
+       hardcoded qui sotto: è una lista dinamica di config/stations.php, un
+       array PHP che questa app Flask non può leggere — va tenuta allineata
+       a mano se lì si aggiunge/rimuove/rinomina una stazione. -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="dot"></span>
+      <div>
+        <strong>STEP</strong>
+        <span>Console regia mostra</span>
+      </div>
+    </div>
+
+    {% for section in sidebar_sections %}
+    <div class="sidebar-section">{{ section.title }}</div>
+    <nav>
+      <ul>
+        {% for item in section['items'] %}
+        {% if item.href == '__WALLCONFIG__' %}
+        <li><a href="/" class="active"><span class="swatch"></span>{{ item.label }}</a></li>
+        {% else %}
+        <li><a href="{{ step_base_url }}/{{ item.href }}"><span class="swatch"></span>{{ item.label }}</a></li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+    </nav>
+
+    {% if section.title == 'Emergenza / recovery' %}
+    <!-- Elenco stazioni duplicato da config/stations.php: tenerlo allineato
+         a mano se lì si aggiunge/rimuove/rinomina una stazione. -->
+    <div class="sidebar-section">Percorso mostra</div>
+    <nav>
+      <ul>
+        <li><a href="{{ step_base_url }}/station.php?station=gate"><span class="swatch"></span>Gate</a></li>
+        <li><a href="{{ step_base_url }}/station.php?station=gallery"><span class="swatch"></span>Gallery</a></li>
+        <li><a href="{{ step_base_url }}/station.php?station=theater"><span class="swatch"></span>Theater</a></li>
+        <li><a href="{{ step_base_url }}/station.php?station=square"><span class="swatch"></span>Future Trends</a></li>
+        <li><a href="{{ step_base_url }}/station.php?station=tuseifuturo"><span class="swatch"></span>Tu Sei Futuro</a></li>
+        <li><a href="{{ step_base_url }}/station.php?station=nextdoor"><span class="swatch"></span>Next Door</a></li>
+        <li><a href="{{ step_base_url }}/station.php?station=gigante"><span class="swatch"></span>Gigante Bracco</a></li>
+        <li><a href="{{ step_base_url }}/station.php?station=magic"><span class="swatch"></span>Magic</a></li>
+        <li><a href="{{ step_base_url }}/station.php?station=wall"><span class="swatch"></span>Wall</a></li>
+      </ul>
+    </nav>
+    {% endif %}
+    {% endfor %}
+
+    <div class="sidebar-footer">STEP Console v2</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-toggle" data-sidebar-toggle aria-label="Apri menu">&#9776;</button>
+      <div class="page-heading">Scenari Schermi STEP</div>
+    </header>
+
+    <div class="content">
+
+      {% for category, text in messages %}
+        <div class="toast {{ 'ok' if category == 'ok' else 'err' }}" style="margin-bottom: 16px;">{{ text }}</div>
+      {% endfor %}
+
+      {% if error %}
+        <div class="toast err" style="margin-bottom: 16px;">{{ error }}</div>
+      {% endif %}
+
+      <div class="panel">
+        <h2>Scenario per tutti gli schermi</h2>
+        <p class="panel-desc">
+          Applica lo stesso scenario a TUTTI gli schermi di TUTTE le sezioni contemporaneamente,
+          in un solo click (invece di scegliere una sezione alla volta nel form qui sotto).
+        </p>
+        <div class="form-grid">
+          <form method="post" action="/send_all" onsubmit="return confirm('Impostare Guest su TUTTI gli schermi?');">
+            <input type="hidden" name="setup" value="GUEST">
+            <button type="submit" class="btn btn-accent btn-block">Tutti gli schermi &rarr; Guest</button>
+          </form>
+          <form method="post" action="/send_all" onsubmit="return confirm('Impostare Standard su TUTTI gli schermi?');">
+            <input type="hidden" name="setup" value="STANDARD">
+            <button type="submit" class="btn btn-neutral btn-block">Tutti gli schermi &rarr; Standard</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Invia comando</h2>
+        <p class="panel-desc">
+          Agisce subito su tutti gli schermi della sezione scelta. Per i setup che hanno
+          comandi WALL definiti (oggi la sezione WALL, sia GUEST che STANDARD) viene inviato
+          prima IN a tutti gli schermi, poi — dopo 3 secondi di attesa — WALL a tutti gli
+          schermi. Per le altre sezioni viene inviato solo IN.
+        </p>
+        <form method="post" action="/send" class="form-grid">
+          <!-- "Sezione" serve solo a filtrare la lista Setup qui sotto: il valore che
+               viene davvero inviato al server è quello del campo "setup", che porta con
+               sé anche la sezione (formato "Sezione::Setup"), così sezione e setup restano
+               sempre coerenti fra loro. -->
+          <div class="field">
+            <label for="section">Sezione</label>
+            <select id="section">
+              {% for name, sec in sections.items() %}
+                <option value="{{ name }}" {% if name == selected_section %}selected{% endif %}>{{ name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="setup">Setup</label>
+            <select name="setup" id="setup">
+              {% for name, sec in sections.items() %}
+                {% for setup_name in sec.setups.keys() %}
+                  <option value="{{ name }}::{{ setup_name }}"
+                          data-section="{{ name }}"
+                          {% if setup_name == selected_setup and name == selected_section %}selected{% endif %}>
+                    {{ setup_name }}
+                  </option>
+                {% endfor %}
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-accent btn-block">Invia comando</button>
+        </form>
+      </div>
+
+      {% if results %}
+      <div class="panel log-panel">
+        <h2>Risultato — {{ selected_section }} / {{ selected_setup }}</h2>
+        <div class="schedule-list">
+          {% for r in results %}
+            <div class="schedule-row">
+              <div class="schedule-row-info">
+                <span class="badge {{ 'badge-start' if r.status == 'INVIATO' else ('badge-stop' if r.status == 'ERRORE' else 'badge-dark') }}">{{ r.status }}</span>
+                <span>{% if r.section %}{{ r.section }} · {% endif %}ID {{ r.id }}{% if r.ip %} · {{ r.ip }}:{{ r.port }}{% endif %}</span>
+              </div>
+              <span class="schedule-row-status">{{ r.detail }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="panel">
+        <h2>Cambi di stato programmati</h2>
+        <p class="panel-desc">
+          Mette in coda lo stesso comando del form qui sopra a una data/ora futura: una
+          tantum, oppure ogni giorno alla stessa ora. Nessun cron da installare: l'invio è
+          fatto in background dal servizio stesso, che gira già permanentemente (systemd). Un
+          comando "una tantum" la cui data/ora passa senza che il servizio fosse attivo viene
+          segnato come scaduto invece di partire in ritardo.
+        </p>
+
+        <form method="post" action="/schedule/add" class="form-grid">
+          <div class="field">
+            <label for="sch-section">Sezione</label>
+            <select id="sch-section">
+              <option value="{{ all_sections_key }}">{{ all_sections_label }}</option>
+              {% for name, sec in sections.items() %}
+                <option value="{{ name }}">{{ name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="sch-setup">Setup</label>
+            <select name="setup" id="sch-setup">
+              <option value="{{ all_sections_key }}::GUEST" data-section="{{ all_sections_key }}">GUEST</option>
+              <option value="{{ all_sections_key }}::STANDARD" data-section="{{ all_sections_key }}">STANDARD</option>
+              {% for name, sec in sections.items() %}
+                {% for setup_name in sec.setups.keys() %}
+                  <option value="{{ name }}::{{ setup_name }}" data-section="{{ name }}">
+                    {{ setup_name }}
+                  </option>
+                {% endfor %}
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="sch-repeat">Ripetizione</label>
+            <select name="repeat" id="sch-repeat">
+              <option value="once">Una volta</option>
+              <option value="daily">Ogni giorno</option>
+            </select>
+          </div>
+          <div class="field" id="sch-date-field">
+            <label for="sch-date">Data</label>
+            <input type="date" name="date" id="sch-date">
+          </div>
+          <div class="field">
+            <label for="sch-time">Ora</label>
+            <input type="time" name="time" id="sch-time" required>
+          </div>
+          <button type="submit" class="btn btn-accent btn-block">Programma</button>
+        </form>
+
+        <div class="schedule-list">
+          {% if jobs %}
+            {% for job in jobs %}
+              <div class="schedule-row {{ 'is-disabled' if not job.enabled else '' }}">
+                <div class="schedule-row-info">
+                  <span class="badge badge-accent">{{ job.setupLabel }} ({{ job.sectionLabel }})</span>
+                  <span>{{ job.whenText }}</span>
+                  <span class="schedule-row-status">{{ job.statusText }}</span>
+                </div>
+                <div class="schedule-row-actions job-row-actions">
+                  {% if not job.missed %}
+                    <form method="post" action="/schedule/toggle">
+                      <input type="hidden" name="id" value="{{ job.id }}">
+                      <input type="hidden" name="enabled" value="{{ '0' if job.enabled else '1' }}">
+                      <button type="submit" class="btn btn-neutral btn-sm">{{ 'Sospendi' if job.enabled else 'Riattiva' }}</button>
+                    </form>
+                  {% endif %}
+                  <form method="post" action="/schedule/delete" onsubmit="return confirm('Eliminare questo comando programmato?');">
+                    <input type="hidden" name="id" value="{{ job.id }}">
+                    <button type="submit" class="btn btn-stop btn-sm">Elimina</button>
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="log-empty">Nessun cambio di stato programmato.</p>
+          {% endif %}
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+  // Sidebar a scomparsa su schermi stretti: stesso comportamento di
+  // initSidebarToggle() in assets/js/app.js della console STEPconsolle,
+  // riscritto qui in piccolo invece di caricare quel file cross-origin
+  // (che assume elementi di quella pagina, come il form del contesto
+  // visita, che qui non esistono).
+  (function () {
+    const toggle = document.querySelector('[data-sidebar-toggle]');
+    const sidebar = document.querySelector('.sidebar');
+    if (!toggle || !sidebar) return;
+    toggle.addEventListener('click', () => sidebar.classList.toggle('is-open'));
+    document.addEventListener('click', (ev) => {
+      if (!sidebar.classList.contains('is-open')) return;
+      if (sidebar.contains(ev.target) || toggle.contains(ev.target)) return;
+      sidebar.classList.remove('is-open');
+    });
+  })();
+
+  // Filtra le opzioni di un select "setup" in base al select "sezione"
+  // collegato. Nota: si rimuovono/riaggiungono davvero gli elementi
+  // <option> dal DOM (invece di usare "hidden"), perché non tutti i
+  // browser nascondono le option "hidden" dentro il popup nativo del
+  // <select> — con la rimozione reale, la sezione scelta mostra SEMPRE
+  // E SOLO i suoi setup. Usata sia dal form di invio immediato sia da
+  // quello dello scheduler: stessa coppia di select, stesso comportamento,
+  // un solo posto che lo implementa.
+  function wireSectionSetup(sectionSel, setupSel) {
+    const allSetupOptions = Array.from(setupSel.options); // copia di tutte le option originali
+
+    function filterSetups() {
+      const chosen = sectionSel.value;
+      const matching = allSetupOptions.filter(opt => opt.dataset.section === chosen);
+      const previousValue = setupSel.value;
+      setupSel.replaceChildren(...matching);
+      const stillValid = matching.some(opt => opt.value === previousValue);
+      setupSel.value = stillValid ? previousValue : (matching[0] ? matching[0].value : '');
+    }
+    sectionSel.addEventListener('change', filterSetups);
+    filterSetups();
+  }
+
+  wireSectionSetup(document.getElementById('section'), document.getElementById('setup'));
+  wireSectionSetup(document.getElementById('sch-section'), document.getElementById('sch-setup'));
+
+  // Nel form dello scheduler, il campo Data serve solo per "una volta":
+  // per "ogni giorno" viene nascosto e non richiesto.
+  const schRepeat = document.getElementById('sch-repeat');
+  const schDateField = document.getElementById('sch-date-field');
+  const schDate = document.getElementById('sch-date');
+
+  function syncDateField() {
+    const isOnce = schRepeat.value === 'once';
+    schDateField.style.display = isOnce ? '' : 'none';
+    schDate.required = isOnce;
+    schDate.disabled = !isOnce;
+    if (isOnce && !schDate.value) {
+      schDate.value = new Date().toISOString().slice(0, 10);
+    }
+  }
+  schRepeat.addEventListener('change', syncDateField);
+  syncDateField();
+</script>
+</body>
+</html>

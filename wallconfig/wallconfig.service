@@ -1,0 +1,16 @@
+[Unit]
+Description=WallConfig Web Control
+After=network.target
+
+[Service]
+Type=simple
+User=fastweb
+Group=fastweb
+WorkingDirectory=/var/www/STEPconsolle/wallconfig
+Environment=WALLCONFIG_PATH=/var/www/STEPconsolle/wallconfig/WallConfig.txt
+ExecStart=/usr/bin/python3 /var/www/STEPconsolle/wallconfig/app.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
